@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -16,11 +17,22 @@ export class UsersService {
     private readonly userModel: Model<User>,
   ) {}
   async create(createUserDto: CreateUserDto) {
-    return await this.userModel.create(createUserDto);
+    const orCondition = {
+      $or: [
+        { username: createUserDto.username },
+        { email: createUserDto.email },
+      ],
+    };
+    const existingUser = await this.userModel.findOne(orCondition);
+    if (existingUser) {
+      throw new BadRequestException(`username or email is already in use`);
+    }
+    const user = await this.userModel.create(createUserDto);
+    return user;
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+    return await this.userModel.find();
   }
 
   async findOne(id: string) {
