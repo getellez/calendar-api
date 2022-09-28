@@ -17,18 +17,20 @@ export class UsersService {
     private readonly userModel: Model<User>,
   ) {}
   async create(createUserDto: CreateUserDto) {
-    const orCondition = {
-      $or: [
-        { username: createUserDto.username },
-        { email: createUserDto.email },
-      ],
-    };
-    const existingUser = await this.userModel.findOne(orCondition);
-    if (existingUser) {
-      throw new BadRequestException(`username or email is already in use`);
+    try {
+      const user = await this.userModel.create(createUserDto);
+      return user;
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new BadRequestException(
+          `The user already exists - ${JSON.stringify(error.keyValue)}`,
+        );
+      }
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Unexpected error - check server logs',
+      );
     }
-    const user = await this.userModel.create(createUserDto);
-    return user;
   }
 
   async findAll() {
